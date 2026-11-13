@@ -1,0 +1,31 @@
+{
+  "version": "1.5.2-afta.9",
+  "versionCode": 14009,
+  "packageName": "io.github.toolicious.homeonfire.afta",
+  "apkFile": "home-on-fire-afta.apk",
+  "apkSha256": "3a288463ab28cf37026ed141faae8a9fa4f74ea656137ebe0e2da12de854c266",
+  "publicationRebuildMatchesRecordedInstalledApk": true,
+  "hostAssertions": 262,
+  "checks": [
+    "80 redirection",
+    "21 usage cursor",
+    "79 Home cover",
+    "59 cleanup",
+    "23 script helpers",
+    "v1/v2 signing",
+    "ZIP alignment",
+    "package/version/SDK/components"
+  ],
+  "sourceBaseCommit": "f629042674f1faa4b7bce0f54b77a5f849202651",
+  "jdk": "javac 25.0.1",
+  "compileSdk": 35,
+  "minSdk": 21,
+  "targetSdk": 34,
+  "buildTools": "36.1.0",
+  "powershell": "5.1.26100.9818",
+  "preview": true,
+  "developmentDebugBuild": true,
+  "fullHardwareQualification": false,
+  "privateDeviceDataIncluded": false,
+  "verifiedAtUtc": "2026-11-13T00:14:03.6866447Z"
+}

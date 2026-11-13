@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Copyright (C) 2026 toolicious
+// Copyright (C) 2026 toolicious; AFTA fork changes implemented with OpenAI Codex on 2026-11-12; original Home on Fire by toolicious.
 package io.github.toolicious.homeonfire;
 
 import android.content.Context;
+import android.content.ComponentName;
 import android.content.pm.PackageManager;
 import android.provider.Settings;
 import android.text.TextUtils;
@@ -27,12 +28,16 @@ import android.text.TextUtils;
  */
 public class AccessibilityHelper {
 
-    /** Short form used when writing the secure setting. */
-    public static final String SERVICE_ID = "io.github.toolicious.homeonfire/.HijackService";
+    public static ComponentName component(Context ctx) {
+        return new ComponentName(ctx, HijackService.class);
+    }
 
-    /** Fully qualified form Android may store after normalization. */
-    public static final String SERVICE_ID_FULL =
-            "io.github.toolicious.homeonfire/io.github.toolicious.homeonfire.HijackService";
+    private static boolean isOurs(Context ctx, String entry) {
+        return component(ctx).equals(ComponentName.unflattenFromString(entry));
+    }
+
+    /** Connection comes from the service lifecycle, not the secure-setting string. */
+    public static boolean isOurServiceConnected() { return HijackService.isConnected(); }
 
     private static final String PERM_WRITE_SECURE_SETTINGS =
             "android.permission.WRITE_SECURE_SETTINGS";
@@ -47,7 +52,7 @@ public class AccessibilityHelper {
                 Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
         if (TextUtils.isEmpty(value)) return false;
         for (String entry : value.split(":")) {
-            if (SERVICE_ID.equals(entry) || SERVICE_ID_FULL.equals(entry)) return true;
+            if (isOurs(ctx, entry)) return true;
         }
         return false;
     }
@@ -59,22 +64,23 @@ public class AccessibilityHelper {
      * rejected (e.g. permission not granted).
      */
     public static boolean enableOurService(Context ctx) {
+        if (new Prefs(ctx).usesUsageBackend() || Backend.otherHomeOnFireEnabled(ctx)) return false;
         try {
             String current = Settings.Secure.getString(ctx.getContentResolver(),
                     Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
             String updated;
             if (TextUtils.isEmpty(current)) {
-                updated = SERVICE_ID;
-            } else if (current.contains(SERVICE_ID) || current.contains(SERVICE_ID_FULL)) {
+                updated = component(ctx).flattenToString();
+            } else if (isOurServiceEnabled(ctx)) {
                 updated = current;
             } else {
-                updated = current + ":" + SERVICE_ID;
+                updated = current + ":" + component(ctx).flattenToString();
             }
-            Settings.Secure.putString(ctx.getContentResolver(),
+            boolean listed = Settings.Secure.putString(ctx.getContentResolver(),
                     Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, updated);
-            Settings.Secure.putInt(ctx.getContentResolver(),
+            boolean enabled = Settings.Secure.putInt(ctx.getContentResolver(),
                     Settings.Secure.ACCESSIBILITY_ENABLED, 1);
-            return true;
+            return listed && enabled;
         } catch (SecurityException e) {
             return false;
         }
@@ -82,7 +88,7 @@ public class AccessibilityHelper {
 
     /** True if the WRITE_SECURE_SETTINGS permission has been granted (via adb). */
     public static boolean hasWriteSecureSettings(Context ctx) {
-        return ctx.checkSelfPermission(PERM_WRITE_SECURE_SETTINGS)
+        return ctx.getPackageManager().checkPermission(PERM_WRITE_SECURE_SETTINGS, ctx.getPackageName())
                 == PackageManager.PERMISSION_GRANTED;
     }
 
@@ -98,13 +104,12 @@ public class AccessibilityHelper {
             if (TextUtils.isEmpty(current)) return true;
             StringBuilder kept = new StringBuilder();
             for (String entry : current.split(":")) {
-                if (SERVICE_ID.equals(entry) || SERVICE_ID_FULL.equals(entry)) continue;
+                if (isOurs(ctx, entry)) continue;
                 if (kept.length() > 0) kept.append(":");
                 kept.append(entry);
             }
-            Settings.Secure.putString(ctx.getContentResolver(),
+            return Settings.Secure.putString(ctx.getContentResolver(),
                     Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, kept.toString());
-            return true;
         } catch (SecurityException e) {
             return false;
         }

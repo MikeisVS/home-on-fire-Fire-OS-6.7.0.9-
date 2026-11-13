@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Copyright (C) 2026 toolicious
+// Copyright (C) 2026 toolicious; AFTA fork changes implemented with OpenAI Codex on 2026-11-12; original Home on Fire by toolicious.
 package io.github.toolicious.homeonfire;
 
 import android.accessibilityservice.AccessibilityService;
@@ -236,12 +236,22 @@ public class HijackService extends AccessibilityService {
      * Initialized in {@link #onServiceConnected}.
      */
     private Prefs prefs;
+    private static volatile boolean connected;
+    static boolean isConnected() { return connected; }
 
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
         sInstance = this;
         prefs = new Prefs(this);
+        if (prefs.usesUsageBackend()) {
+            connected = false;
+            DiagnosticLog.event(this, "accessibility_inactive", "", "", "Usage backend selected");
+            if (Build.VERSION.SDK_INT >= 24) disableSelf();
+            return;
+        }
+        connected = true;
+        DiagnosticLog.event(this, "accessibility_connected", "", "", AppInfo.identity(this));
         // Not gated on verbose logging: a shared logcat dump has to name
         // the build that produced it even when the tester only turned
         // verbose on later (or never).
@@ -315,6 +325,8 @@ public class HijackService extends AccessibilityService {
      * post-wake activity is actually visible to {@link #isCurrentlyOnAmazonLauncher}.
      */
     private void handleWakeFromStandby() {
+        if (prefs.usesUsageBackend()) return;
+        DiagnosticLog.event(this, "wake", "", "", "Accessibility backend SCREEN_ON");
         if (!prefs.isHijackEnabled()) return;
         if (!prefs.getLaunchOnBoot()) return;
         final String target = prefs.getTargetPackage();
@@ -621,6 +633,11 @@ public class HijackService extends AccessibilityService {
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
         if (event == null) return;
+        if (prefs == null || prefs.usesUsageBackend()) return;
+        DiagnosticLog.event(this, "accessibility_event",
+                event.getPackageName() == null ? "" : event.getPackageName().toString(),
+                event.getClassName() == null ? "" : event.getClassName().toString(),
+                "type=" + event.getEventType());
 
         int type = event.getEventType();
         if (type == AccessibilityEvent.TYPE_VIEW_FOCUSED) {
@@ -1334,6 +1351,8 @@ public class HijackService extends AccessibilityService {
      * Back/OK-on-Home-tab return-to-target gesture.
      */
     private void redirectToAmazonHome(String reason) {
+        if (prefs == null || prefs.usesUsageBackend()) return;
+        DiagnosticLog.event(this, "home_escape_inferred", RedirectEngine.HOME_PACKAGE, "", reason);
         bypassUntil = System.currentTimeMillis() + LONGPRESS_REDIRECT_BYPASS_MS;
         pendingHomeTabCapture = true;
         // Asking for Amazon home outranks a button launch still in its grace window, and
@@ -1363,6 +1382,10 @@ public class HijackService extends AccessibilityService {
     @Override
     protected boolean onKeyEvent(KeyEvent event) {
         if (event == null) return false;
+        if (prefs == null || prefs.usesUsageBackend()) return false;
+        DiagnosticLog.event(this, "accessibility_key", "", "",
+                "code=" + event.getKeyCode() + "; action=" + event.getAction()
+                + "; repeat=" + event.getRepeatCount());
         int keyCode = event.getKeyCode();
         boolean isDown = event.getAction() == KeyEvent.ACTION_DOWN;
         boolean isUp = event.getAction() == KeyEvent.ACTION_UP;
@@ -1561,11 +1584,14 @@ public class HijackService extends AccessibilityService {
      *   redirect.
      */
     private boolean launchTarget(String target, String reasonForLog, boolean withMask) {
+        if (prefs == null || prefs.usesUsageBackend()) return false;
+        DiagnosticLog.event(this, "launch_attempt", target, "", reasonForLog);
         PackageManager pm = getPackageManager();
         Intent intent = pm.getLeanbackLaunchIntentForPackage(target);
         if (intent == null) intent = pm.getLaunchIntentForPackage(target);
         if (intent == null) {
             Log.w(TAG, "Target package not installed or not launchable: " + target);
+            DiagnosticLog.event(this, "launch_failed", target, "", "Target not launchable");
             return false;
         }
         // If the target declares itself as a home activity, mark this
@@ -1605,10 +1631,12 @@ public class HijackService extends AccessibilityService {
                 pendingButtonApp = null;
             }
             Log.i(TAG, reasonForLog + ". Launched " + target);
+            DiagnosticLog.event(this, "launch_submitted", target, "", reasonForLog + "; unconfirmed");
             if (withMask) armMask(target);
             return true;
         } catch (Exception e) {
             Log.e(TAG, "Failed to launch " + target, e);
+            DiagnosticLog.event(this, "launch_failed", target, "", e.getClass().getSimpleName());
             return false;
         }
     }
@@ -2369,6 +2397,8 @@ public class HijackService extends AccessibilityService {
 
     @Override
     public boolean onUnbind(android.content.Intent intent) {
+        connected = false;
+        DiagnosticLog.event(this, "accessibility_disconnected", "", "", "onUnbind");
         cancelMenuLongPress();
         // Flush every pending main-handler post (the wake-from-standby
         // runnable in particular) so nothing fires after the service
@@ -2388,6 +2418,20 @@ public class HijackService extends AccessibilityService {
         }
         if (sInstance == this) sInstance = null;
         return super.onUnbind(intent);
+    }
+
+    @Override
+    public void onDestroy() {
+        connected = false;
+        if (sInstance == this) sInstance = null;
+        if (mainHandler != null) mainHandler.removeCallbacksAndMessages(null);
+        cancelMask();
+        if (screenOnReceiver != null) {
+            try { unregisterReceiver(screenOnReceiver); } catch (RuntimeException ignored) {}
+            screenOnReceiver = null;
+        }
+        DiagnosticLog.event(this, "accessibility_disconnected", "", "", "onDestroy");
+        super.onDestroy();
     }
 
     /**
@@ -2911,8 +2955,7 @@ public class HijackService extends AccessibilityService {
                         + " pkg=" + focused.getPackageName()
                         + " id=" + focused.getViewIdResourceName()
                         + " cls=" + focused.getClassName()
-                        + " text=" + focused.getText()
-                        + " desc=" + focused.getContentDescription()
+                        + " text=[omitted] desc=[omitted]"
                         + " bounds=" + b.flattenToString());
             } finally {
                 focused.recycle();

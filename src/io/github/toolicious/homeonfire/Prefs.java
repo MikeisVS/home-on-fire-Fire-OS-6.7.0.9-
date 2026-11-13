@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Copyright (C) 2026 toolicious
+// Copyright (C) 2026 toolicious; AFTA fork changes implemented with OpenAI Codex on 2026-11-12; original Home on Fire by toolicious.
 package io.github.toolicious.homeonfire;
 
 import android.content.Context;
@@ -61,6 +61,29 @@ public class Prefs {
     private static final String DEFAULT_TARGET = "";
 
     private final SharedPreferences sp;
+
+    public String getBackend() {
+        return sp.getString("backend", Backend.isAfta() ? Backend.USAGE : Backend.ACCESSIBILITY);
+    }
+
+    public boolean usesUsageBackend() { return Backend.USAGE.equals(getBackend()); }
+    public void setBackend(String backend) { sp.edit().putString("backend", backend).apply(); }
+    public boolean isMonitorEnabled() { return sp.getBoolean("usage_monitor_enabled", Backend.isAfta()); }
+    public void setMonitorEnabled(boolean enabled) { sp.edit().putBoolean("usage_monitor_enabled", enabled).commit(); }
+    public boolean isDiagnosticOnly() { return sp.getBoolean("usage_diagnostic_only", false); }
+    public void setDiagnosticOnly(boolean enabled) { sp.edit().putBoolean("usage_diagnostic_only", enabled).commit(); }
+    public boolean isAutomationSuspended() { return sp.getBoolean("usage_suspended", false); }
+    public void setAutomationSuspended(boolean value) { sp.edit().putBoolean("usage_suspended", value).commit(); }
+    public boolean isHomeCoverEnabled() { return sp.getBoolean("usage_home_cover_enabled", true); }
+    public void setHomeCoverEnabled(boolean value) { sp.edit().putBoolean("usage_home_cover_enabled", value).commit(); }
+    public boolean isAmazonCleanupEnabled() { return sp.getBoolean("usage_amazon_cleanup_enabled", false); }
+    public void setAmazonCleanupEnabled(boolean value) { sp.edit().putBoolean("usage_amazon_cleanup_enabled", value).commit(); }
+    public boolean getLaunchOnWake() { return sp.getBoolean("launch_on_wake", true); }
+    public void setLaunchOnWake(boolean value) { sp.edit().putBoolean("launch_on_wake", value).apply(); }
+    public boolean isDiagnosticLogging() {
+        return sp.getBoolean("diagnostic_logging", usesUsageBackend()) || isVerboseLogging();
+    }
+    public void setDiagnosticLogging(boolean value) { sp.edit().putBoolean("diagnostic_logging", value).apply(); }
 
     public Prefs(Context ctx) {
         sp = ctx.getApplicationContext().getSharedPreferences(FILE, Context.MODE_PRIVATE);

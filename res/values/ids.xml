@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?><!-- AFTA fork changes implemented with OpenAI Codex on 2026-11-12; original Home on Fire by toolicious. -->
+<resources>
+    <item name="afta_info" type="id" />
+    <item name="afta_target" type="id" />
+    <item name="afta_launch_target" type="id" />
+    <item name="afta_monitor" type="id" />
+    <item name="afta_escape_long" type="id" />
+    <item name="afta_verbose" type="id" />
+    <item name="afta_log_button" type="id" />
+    <item name="afta_home" type="id" />
+    <item name="afta_cover" type="id" />
+    <item name="afta_boot" type="id" />
+    <item name="afta_wake" type="id" />
+    <item name="afta_logging" type="id" />
+    <item name="afta_advanced" type="id" />
+    <item name="afta_mode" type="id" />
+    <item name="afta_resume" type="id" />
+    <item name="afta_open_amazon" type="id" />
+    <item name="afta_stop" type="id" />
+    <item name="afta_status" type="id" />
+    <item name="afta_diagnostics" type="id" />
+    <item name="afta_export" type="id" />
+    <item name="afta_permissions" type="id" />
+    <item name="afta_tip" type="id" />
+</resources>

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?><!-- AFTA fork changes implemented with OpenAI Codex on 2026-11-12; original Home on Fire by toolicious. -->
 <!--
     Canonical color palette. The Java code in MainActivity defines int
     constants that mirror these values (annotated with the matching
@@ -17,6 +17,9 @@
 
     <!-- Neutral surface colors. -->
     <color name="surface_tip_box">#FF2A2A2A</color>
+    <color name="surface_settings">#FF303030</color>
+    <color name="status_good">#FF4CAF50</color>
+    <color name="status_problem">#FFFF6B6B</color>
 
     <!-- Text. -->
     <color name="text_neutral">#FFE0E0E0</color>

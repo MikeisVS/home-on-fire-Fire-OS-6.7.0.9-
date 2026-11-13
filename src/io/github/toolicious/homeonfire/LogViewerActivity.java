@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Copyright (C) 2026 toolicious
+// Copyright (C) 2026 toolicious; AFTA fork changes implemented with OpenAI Codex on 2026-11-12; original Home on Fire by toolicious.
 package io.github.toolicious.homeonfire;
 
 import android.accessibilityservice.AccessibilityServiceInfo;
@@ -125,6 +125,14 @@ public class LogViewerActivity extends Activity {
         boolean inSettings = AccessibilityHelper.isOurServiceEnabled(this);
         addRow(card, "In settings", inSettings ? "enabled" : "off",
                 (inSettings == bound) ? DIM : BAD_RED);
+        addRow(card, "Backend", prefs.getBackend(), Colors.WHITE);
+        addRow(card, "Usage Access", Backend.hasUsageAccess(this) ? "allowed" : "not allowed", DIM);
+        if (prefs.usesUsageBackend()) {
+            addRow(card, "Monitor", UsageMonitorService.status, DIM);
+            addRow(card, "Foreground (reported)", UsageMonitorService.foreground, DIM);
+            addRow(card, "Launch status", UsageMonitorService.launchStatus, DIM);
+            addRow(card, "Capture limits", "Usage events only; no raw Home or accessibility events", DIM);
+        }
 
         String target = prefs.getTargetPackage();
         if (target == null || target.isEmpty()) {
@@ -157,7 +165,7 @@ public class LogViewerActivity extends Activity {
         sec.setPadding(0, dp(18), 0, 0);
 
         TextView heading = new TextView(this);
-        heading.setText("Recent log (tag HomeOnFire)");
+        heading.setText("Persistent diagnostic metadata");
         heading.setTextSize(15);
         heading.setTextColor(DIM);
         heading.setPadding(dp(2), 0, 0, dp(8));
@@ -168,7 +176,7 @@ public class LogViewerActivity extends Activity {
         log.setBackgroundColor(CARD_BG);
         log.setPadding(dp(16), dp(14), dp(16), dp(14));
 
-        String tail = readOwnLog();
+        String tail = DiagnosticLog.tail(this);
         if (!tail.isEmpty()) {
             log.setTypeface(Typeface.MONOSPACE);
             log.setTextColor(LOG_FG);
@@ -178,7 +186,7 @@ public class LogViewerActivity extends Activity {
             log.setLineSpacing(dp(2), 1f);
             log.setText(serviceBound
                     ? "No events captured yet. Press Home or open the target app, then reopen this screen."
-                    : "This Fire OS build blocks third-party accessibility services (shown as \"NOT BOUND\" above), so Home on Fire's Home-button redirect never starts and has nothing to record. This is an Amazon firmware restriction, not a missing setting or a bug, so there is nothing to enable or fix here.");
+                    : "The accessibility service is not connected. A configured setting alone does not establish why. On the audited AFTA 6.7.0.9 build an Amazon signing check blocks this service; use AFTA diagnostics to investigate the separate Usage Access backend.");
         }
         sec.addView(log);
         return sec;
@@ -251,21 +259,7 @@ public class LogViewerActivity extends Activity {
 
     /** True if our HijackService is in the list of currently bound services. */
     private boolean isServiceBound() {
-        try {
-            AccessibilityManager am =
-                    (AccessibilityManager) getSystemService(ACCESSIBILITY_SERVICE);
-            if (am == null) return false;
-            List<AccessibilityServiceInfo> list =
-                    am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK);
-            if (list == null) return false;
-            for (AccessibilityServiceInfo si : list) {
-                String id = si.getId();
-                if (id != null && id.startsWith(getPackageName())) return true;
-            }
-        } catch (Exception ignored) {
-            // Treat any lookup failure as "not bound".
-        }
-        return false;
+        return AccessibilityHelper.isOurServiceConnected();
     }
 
     private boolean isInstalled(String pkg) {

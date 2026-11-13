@@ -1,15 +1,20 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?><!-- AFTA fork changes implemented with OpenAI Codex on 2026-11-12; original Home on Fire by toolicious. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="io.github.toolicious.homeonfire"
-    android:versionCode="140"
-    android:versionName="1.5.2">
+    android:versionCode="14009"
+    android:versionName="1.5.2-afta.9">
 
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
     <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"
+        tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
 
@@ -32,6 +37,8 @@
             package visibility filtering hides it from us on API 30+.
         -->
         <package android:name="com.amazon.tv.quicksettings.ui" />
+        <package android:name="io.github.toolicious.homeonfire" />
+        <package android:name="com.amazon.tv.launcher" />
     </queries>
 
     <application
@@ -39,10 +46,11 @@
         android:icon="@mipmap/ic_launcher"
         android:banner="@drawable/banner"
         android:allowBackup="false"
+        android:debuggable="true"
         android:theme="@style/AppTheme">
 
         <activity
-            android:name=".MainActivity"
+            android:name="io.github.toolicious.homeonfire.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -52,20 +60,20 @@
         </activity>
 
         <activity
-            android:name=".TargetPickerActivity"
+            android:name="io.github.toolicious.homeonfire.TargetPickerActivity"
             android:exported="false" />
 
         <activity
-            android:name=".LogViewerActivity"
+            android:name="io.github.toolicious.homeonfire.LogViewerActivity"
             android:exported="false" />
 
         <activity
-            android:name=".LoaderPreviewActivity"
+            android:name="io.github.toolicious.homeonfire.LoaderPreviewActivity"
             android:exported="false"
             android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen" />
 
         <service
-            android:name=".HijackService"
+            android:name="io.github.toolicious.homeonfire.HijackService"
             android:label="@string/service_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="false">
@@ -77,13 +85,21 @@
                 android:resource="@xml/accessibility_config" />
         </service>
 
+        <activity android:name="io.github.toolicious.homeonfire.AftaSettingsActivity"
+            android:exported="false" />
+
+        <!-- This service refuses to start unless the device is AFTA / API 25. -->
+        <service android:name="io.github.toolicious.homeonfire.UsageMonitorService"
+            android:exported="false" />
+
         <receiver
-            android:name=".BootReceiver"
+            android:name="io.github.toolicious.homeonfire.BootReceiver"
             android:enabled="true"
             android:exported="true"
             android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>

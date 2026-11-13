@@ -1,7 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?><!-- AFTA fork changes implemented with OpenAI Codex on 2026-11-12; original Home on Fire by toolicious. -->
 <resources>
-    <string name="app_name">Home on Fire</string>
-    <string name="service_label">Home on Fire Service</string>
+    <string name="app_name">Home on Fire AFTA Experimental</string>
+    <string name="service_label">Home on Fire AFTA Experimental Service</string>
     <string name="repo_url">https://github.com/toolicious/home-on-fire</string>
 
     <!--
@@ -27,7 +27,7 @@
 
     <!-- Switches -->
     <string name="switch_accessibility">Accessibility service (required)</string>
-    <string name="switch_accessibility_tip">Required for everything else in this app to work. This permission has to be granted only once via adb:\nadb shell pm grant io.github.toolicious.homeonfire android.permission.WRITE_SECURE_SETTINGS\nFrom a phone shell app there is no adb: run just the pm grant part, without the adb shell prefix.</string>
+    <string name="switch_accessibility_tip">Used by the accessibility backend. A configured entry does not prove the service connected. Optional setup permission for this development app:\nadb shell pm grant io.github.toolicious.homeonfire.afta android.permission.WRITE_SECURE_SETTINGS\nThis grant cannot bypass the AFTA Fire OS 6 signing restriction. Diagnostics remain available without it.</string>
     <string name="switch_hijack">Replace ⌂ Home button</string>
     <string name="switch_hijack_tip">Pressing ⌂ Home from any third-party app opens the target app instead of the Amazon home screen.\nDouble-press ⌂ Home about a second apart, or long-press it, in the target app to escape to the Amazon home screen if needed.\nPress ↩ Back or ◉ OK while the Home icon on the Amazon home screen is focused to open the target app.</string>
     <string name="switch_hijack_tip_fos7">Pressing ⌂ Home from any third-party app opens the target app instead of the Amazon home screen.\nOn Fire OS 7 the system holds a Home press for up to 5 seconds; a loading animation covers the wait. A mapped launcher button that sends its own key code opens instantly instead.\nDouble-press ⌂ Home about a second apart, or long-press it, in the target app to escape to the Amazon home screen if needed.\nPress ↩ Back or ◉ OK while the Home icon on the Amazon home screen is focused to open the target app.</string>
@@ -128,11 +128,45 @@
     <!-- Info dialog -->
     <string name="info_dialog_version">Version %1$s</string>
     <string name="info_dialog_version_unknown">?</string>
+    <!-- Original presentation with controls for the AFTA Usage Access backend. -->
+    <string name="afta_screen_title">Home on Fire</string>
+    <string name="afta_monitor_label">Usage Access monitor (required)</string>
+    <string name="afta_monitor_tip">Keep the monitor on for Home, boot and wake launching. Advanced settings shows connection and recovery controls.</string>
+    <string name="afta_escape_long_tip">Hold Home to switch between Couchy and Amazon through the Cube\'s Sleep/Apps panel. Turn this off to leave that panel alone. Home redirection stays available. Space Home gestures at least 20 seconds apart.</string>
+    <string name="afta_verbose_tip">Add detailed monitor-event metadata to the HomeOnFire logcat tag and keep diagnostic recording on. The button on the right opens diagnostics. Turn Verbose logging off before disabling diagnostic logging in Advanced settings. Usage Access does not provide raw remote keys or screen text.</string>
+    <string name="afta_logging_needs_verbose_off">Turn Verbose logging off first; it also enables diagnostic recording.</string>
+    <string name="afta_home_tip">Redirect Home to your launcher after the existing delay. Hold Home to escape to Amazon or return. Space Home gestures at least 20 seconds apart.</string>
+    <string name="afta_cover_label">Hide Amazon while launcher opens</string>
+    <string name="afta_cover_tip">Show the loading animation during the Home delay. Requires Display over other apps permission.</string>
+    <string name="afta_boot_tip">Open your selected launcher when the Cube boots.</string>
+    <string name="afta_wake_label">Launch on wake</string>
+    <string name="afta_wake_tip">Open your selected launcher after standby, even if another app was open before sleep.</string>
+    <string name="afta_logging_label">Diagnostic logging (for debugging)</string>
+    <string name="afta_logging_tip">Record launcher and monitor events locally. View or export them from Advanced settings.</string>
+    <string name="afta_advanced_label">Advanced settings</string>
+    <string name="afta_advanced_tip">Loading animation, wake launching, monitor status, recovery and diagnostics.</string>
+    <string name="afta_mode_label">Automatic launching</string>
+    <string name="afta_mode_tip">Turn off to observe events without launching apps. Turn on to resume automatic Home, boot and wake behavior.</string>
+    <string name="afta_resume_label">Resume after automatic suspension</string>
+    <string name="afta_resume_tip">Clear the monitor\'s circuit suspension. Automatic launching must also be on.</string>
+    <string name="afta_open_amazon_label">Open Amazon launcher now</string>
+    <string name="afta_stop_label">Stop monitor and all automatic redirection</string>
+    <string name="afta_status_label">Connection status</string>
+    <string name="afta_diagnostics_label">View diagnostics</string>
+    <string name="afta_export_label">Export diagnostic snapshot for ADB</string>
+    <string name="afta_permissions_label">Permission setup and mode limits</string>
+    <string name="afta_close">Close</string>
+    <string name="afta_active">Active</string>
+    <string name="afta_stopped">Stopped</string>
+    <string name="afta_suspended">Suspended</string>
+    <string name="afta_diagnostic_only">Diagnostics only</string>
+    <string name="afta_permission_needed">Permission needed</string>
+    <string name="afta_starting">Starting</string>
     <string name="info_dialog_description">Redirects the Fire TV ⌂ Home button to a launcher of your choice.</string>
     <string name="info_dialog_ok">OK</string>
 
     <!-- Toasts -->
-    <string name="toast_grant_via_adb">Run once via adb:\nadb shell pm grant io.github.toolicious.homeonfire android.permission.WRITE_SECURE_SETTINGS</string>
+    <string name="toast_grant_via_adb">Check the selected backend and other Home on Fire services. Optional accessibility setup grant:\nadb shell pm grant io.github.toolicious.homeonfire.afta android.permission.WRITE_SECURE_SETTINGS</string>
     <string name="toast_no_browser">No browser installed.</string>
     <string name="toast_settings_unavailable">Settings not available.</string>
     <string name="toast_no_target">No target app set.</string>

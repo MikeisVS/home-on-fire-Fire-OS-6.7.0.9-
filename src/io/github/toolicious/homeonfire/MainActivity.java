@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Copyright (C) 2026 toolicious
+// Copyright (C) 2026 toolicious; AFTA fork changes implemented with OpenAI Codex on 2026-11-12; original Home on Fire by toolicious.
 package io.github.toolicious.homeonfire;
 
 import android.app.Activity;
@@ -213,11 +213,19 @@ public class MainActivity extends Activity {
 
     /** Single Prefs wrapper used by all callbacks; cheaper than rebuilding it per click. */
     private Prefs prefs;
+    private boolean openingAftaSettings;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         prefs = new Prefs(this);
+        if (Backend.isAfta()) {
+            if (!prefs.usesUsageBackend()) prefs.setBackend(Backend.USAGE);
+            openingAftaSettings = true;
+            startActivity(new Intent(this, AftaSettingsActivity.class));
+            finish();
+            return;
+        }
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -227,7 +235,14 @@ public class MainActivity extends Activity {
         LinearLayout content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(dp(32), dp(20), dp(32), dp(24));
-
+        android.widget.Button diagnostics = new android.widget.Button(this);
+        diagnostics.setText("Connection status and diagnostics");
+        diagnostics.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, LogViewerActivity.class));
+            }
+        });
+        content.addView(diagnostics);
         content.addView(buildTargetRow(), targetRowLp());
         addSwitches(content);
         addTuningRows(content);
@@ -2038,7 +2053,7 @@ public class MainActivity extends Activity {
      */
     private void updateLogButtonVisibility() {
         if (logBtn != null) {
-            boolean show = prefs.isVerboseLogging() && accessSwitch.isChecked();
+            boolean show = prefs.isVerboseLogging();
             logBtn.setVisibility(show ? View.VISIBLE : View.GONE);
         }
     }
@@ -2342,6 +2357,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (openingAftaSettings) return;
         // State (target package, accessibility status, ...) might have
         // changed while this activity was paused, e.g. via the picker.
         refresh();
@@ -2661,7 +2677,7 @@ public class MainActivity extends Activity {
         View focusedBefore = getCurrentFocus();
         setRowEnabled(hijackSwitch, accessOn);
         setRowEnabled(bootSwitch, accessOn);
-        setRowEnabled(verboseSwitch, accessOn);
+        setRowEnabled(verboseSwitch, true);
         setRowEnabled(menuLpSwitch, accessOn);
         setRowEnabled(launchKeyEnabledSwitch, accessOn);
         // The value box is gated on both the service AND the shortcut toggle.

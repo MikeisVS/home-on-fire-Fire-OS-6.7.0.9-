@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Copyright (C) 2026 toolicious
+// Copyright (C) 2026 toolicious; AFTA fork changes implemented with OpenAI Codex on 2026-11-12; original Home on Fire by toolicious.
 package io.github.toolicious.homeonfire;
 
 /**
@@ -22,4 +22,11 @@ public final class Colors {
 
     /** Mirrors {@code @color/surface_tip_box}. The pinned tip strip. */
     public static final int TIP_BG = 0xFF2A2A2A;
+
+    /** Mirrors {@code @color/surface_settings}; the original settings surface. */
+    public static final int SETTINGS_BG = 0xFF303030;
+
+    /** Mirrors {@code @color/status_good} and {@code @color/status_problem}. */
+    public static final int GOOD = 0xFF4CAF50;
+    public static final int PROBLEM = 0xFFFF6B6B;
 }

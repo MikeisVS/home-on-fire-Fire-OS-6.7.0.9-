@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Copyright (C) 2026 toolicious
+// Copyright (C) 2026 toolicious; AFTA fork changes implemented with OpenAI Codex on 2026-11-12; original Home on Fire by toolicious.
 package io.github.toolicious.homeonfire;
 
 import android.content.BroadcastReceiver;
@@ -24,11 +24,20 @@ public class BootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context ctx, Intent intent) {
         String action = intent != null ? intent.getAction() : null;
-        if (!Intent.ACTION_BOOT_COMPLETED.equals(action)) {
+        if (!Intent.ACTION_BOOT_COMPLETED.equals(action) && !Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) {
             return;
         }
 
         Prefs prefs = new Prefs(ctx);
+        DiagnosticLog.event(ctx, "boot_or_update", "", "", action);
+        if (prefs.usesUsageBackend()) {
+            if (prefs.isMonitorEnabled()) {
+                UsageMonitorService.start(ctx, Intent.ACTION_BOOT_COMPLETED.equals(action)
+                        ? UsageMonitorService.BOOT : UsageMonitorService.CONFIGURE);
+            }
+            return;
+        }
+        if (!Intent.ACTION_BOOT_COMPLETED.equals(action)) return;
         if (!prefs.getLaunchOnBoot()) return;
         // Honour the dependency the UI advertises: with the accessibility
         // service off, the grayed-out boot switch should be truthful and
@@ -59,8 +68,10 @@ public class BootReceiver extends BroadcastReceiver {
         try {
             ctx.startActivity(launch);
             Log.i(HijackService.TAG, "Boot: launched " + target);
+            DiagnosticLog.event(ctx, "launch_submitted", target, "", "Accessibility backend boot; unconfirmed");
         } catch (Exception e) {
             Log.e(HijackService.TAG, "Boot: failed to launch " + target, e);
+            DiagnosticLog.event(ctx, "launch_failed", target, "", e.getClass().getSimpleName());
         }
     }
 }
