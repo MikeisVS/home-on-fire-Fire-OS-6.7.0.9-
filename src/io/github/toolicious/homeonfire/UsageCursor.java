@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-/* AFTA fork changes implemented with OpenAI Codex on 2026-11-12; original Home on Fire by toolicious. */ package io.github.toolicious.homeonfire;
+/* AFTA fork changes implemented with OpenAI Codex on 2026-11-12; updated on 2026-11-14; original Home on Fire by toolicious. */ package io.github.toolicious.homeonfire;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -19,7 +19,9 @@ final class UsageCursor {
             reset(wall);
         }
         end = wall;
-        long start = seeding ? Math.max(0, wall - 86400000L)
+        // A fast boot launch must not be skipped because yesterday's Couchy
+        // foreground survives in usage history from before this system boot.
+        long start = seeding ? Math.max(0, wall - Math.min(86400000L, elapsed))
                 : Math.max(0, lastWall - OVERLAP_MS);
         lastWall = wall;
         lastElapsed = elapsed;

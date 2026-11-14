@@ -1,5 +1,5 @@
 #requires -Version 5.1
-# AFTA fork changes implemented with OpenAI Codex on 2026-11-12; original Home on Fire by toolicious.
+# AFTA fork changes implemented with OpenAI Codex on 2026-11-12; updated on 2026-11-14; original Home on Fire by toolicious.
 Set-StrictMode -Version Latest
 $AftaPackage = 'io.github.toolicious.homeonfire.afta'
 
@@ -74,6 +74,14 @@ function Invoke-AftaAdb {
 
 function Get-AftaProperty([string] $Name) {
     return (Invoke-AftaAdb -Arguments @('shell', 'getprop', $Name)).Text.Trim()
+}
+
+function Get-AftaSignerIdentity([string] $Verification) {
+    $signers = @([regex]::Matches($Verification,
+        '(?m)^Signer #\d+ certificate SHA-256 digest:\s*([0-9a-fA-F]{64})\s*$') |
+        ForEach-Object { $_.Groups[1].Value.ToLowerInvariant() } | Sort-Object -Unique)
+    if ($signers.Count -eq 0) { throw 'APK verification did not provide a valid signer SHA-256 identity.' }
+    return ($signers -join ',')
 }
 
 function ConvertTo-RemoteLiteral([string] $Value) {

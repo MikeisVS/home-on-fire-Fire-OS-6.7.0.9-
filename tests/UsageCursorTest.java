@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-package io.github.toolicious.homeonfire;
+/* AFTA fork changes implemented with OpenAI Codex on 2026-11-12; updated on 2026-11-14; original Home on Fire by toolicious. */ package io.github.toolicious.homeonfire;
 
 public final class UsageCursorTest {
     private static int checks;
@@ -9,7 +9,7 @@ public final class UsageCursorTest {
     }
     public static void main(String[] args) {
         UsageCursor c = new UsageCursor();
-        check(c.begin(100000000, 1000) == 13600000, "Initial read uses bounded 24-hour seed");
+        check(c.begin(100000000, 1000) == 99999000, "Initial seed cannot import foreground from before this boot");
         check(c.isSeeding(), "Initial query is seed-only");
         check(c.accept(99999000, 1, "a", "A"), "First event accepted");
         check(!c.isFresh(99999000), "Pre-start history is not fresh");
@@ -54,6 +54,10 @@ public final class UsageCursorTest {
         delayed.reset(100003250);
         check(delayed.acceptObservation(lateEvent - 50),
                 "Wake/service/clock reset allows a newly seeded timeline");
+        check(new UsageCursor().begin(200000000, 100000000) == 113600000,
+                "Long-running devices retain the existing 24-hour seed limit");
+        check(new UsageCursor().begin(100000000, 0) == 100000000,
+                "Zero elapsed time cannot import an earlier boot");
         System.out.println("UsageCursor: " + checks + " behavioral assertions passed");
     }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-/* AFTA fork changes implemented with OpenAI Codex on 2026-11-12; original Home on Fire by toolicious. */ package io.github.toolicious.homeonfire;
+/* AFTA fork changes implemented with OpenAI Codex on 2026-11-12; updated on 2026-11-14; original Home on Fire by toolicious. */ package io.github.toolicious.homeonfire;
 
 import android.app.ActivityManager;
 import android.app.Notification;
@@ -20,7 +20,7 @@ import android.os.SystemClock;
 /**
  * Opt-in, API-25/AFTA-only foreground monitor. Android event reads and policy changes
  * are serialized on one worker thread. Home loading windows are confined to main.
- * No key injection or privileged APIs.
+ * No key injection. The filtered system Home log requires an explicit READ_LOGS grant.
  */
 @SuppressWarnings("deprecation")
 public final class UsageMonitorService extends Service {
@@ -43,6 +43,7 @@ public final class UsageMonitorService extends Service {
     private RedirectEngine engine;
     private AmazonCleanupPolicy cleanup;
     private HomeCover homeCover;
+    private volatile HomeIntentMonitor homeSignals;
     private final UsageCursor cursor = new UsageCursor();
     private PowerManager power;
     private UsageStatsManager usage;
@@ -129,11 +130,20 @@ public final class UsageMonitorService extends Service {
                         manager.killBackgroundProcesses(AmazonCleanupPolicy.AMAZON_PACKAGE);
                     }
                 });
+                homeSignals = new HomeIntentMonitor(UsageMonitorService.this, worker,
+                        new HomeIntentMonitor.Listener() {
+                            @Override public void home(long occurredAt) {
+                                if (destroyed) return;
+                                engine.homePressed("homekey", occurredAt);
+                                schedulePoll();
+                            }
+                        });
                 configure(false);
                 awake = power != null && power.isInteractive();
                 engine.screen(awake, false, SystemClock.elapsedRealtime());
                 DiagnosticLog.event(UsageMonitorService.this, "service_started", "", "",
-                        AppInfo.identity(UsageMonitorService.this) + "; accessibility/key events unavailable in Usage mode");
+                        AppInfo.identity(UsageMonitorService.this)
+                                + "; UsageEvents and filtered system Home intents; raw key events unavailable");
                 schedulePoll();
             }
         });
@@ -175,6 +185,7 @@ public final class UsageMonitorService extends Service {
     }
 
     private void configure(boolean resume) {
+        if (homeSignals != null) homeSignals.stop();
         homeCover.clear("configuration changed");
         if (resume) prefs.setAutomationSuspended(false);
         engine.configure(prefs.getTargetPackage(), prefs.isHijackEnabled(), prefs.getLaunchOnBoot(),
@@ -213,6 +224,7 @@ public final class UsageMonitorService extends Service {
                     String action = intent.getAction();
                     DiagnosticLog.event(UsageMonitorService.this, "screen_broadcast", "", "", action);
                     if (Intent.ACTION_TIME_CHANGED.equals(action)) {
+                        if (homeSignals != null) homeSignals.stop();
                         cleanup.reset("wall clock changed");
                         cursor.reset(System.currentTimeMillis());
                         engine.resetObservation("wall clock changed");
@@ -244,6 +256,7 @@ public final class UsageMonitorService extends Service {
     private void updateScreen(boolean on) {
         if (awake == on) return;
         awake = on;
+        if (homeSignals != null) homeSignals.stop();
         cleanup.reset(on ? "new wake observation" : "screen off or standby");
         if (!on) homeCover.clear("screen off or standby");
         cursor.reset(System.currentTimeMillis());
@@ -287,6 +300,9 @@ public final class UsageMonitorService extends Service {
             cleanup.eligibility(cleanupAllowed(allowed), "cleanup no longer eligible");
             boolean queryHealthy = true;
             if (allowed) queryHealthy = readEvents();
+            if (homeSignals != null) homeSignals.update(queryHealthy && allowed && !conflict
+                    && prefs.isHijackEnabled() && !prefs.isDiagnosticOnly()
+                    && !prefs.isAutomationSuspended() && !engine.isTripped());
             synchronized (dispatchLock) {
                 if (destroyed || !prefs.isMonitorEnabled()) return;
                 if (!configured.equals(configurationKey())) configure(false);
@@ -316,6 +332,7 @@ public final class UsageMonitorService extends Service {
                     + (allowed ? (queryHealthy ? " — Usage Access allowed" : " — event query failed")
                                : " — Usage Access unavailable; Home/HUD detection disabled")
                     + "; pending=" + engine.pendingReason()
+                    + (homeSignals == null ? "" : "; Settings Home=" + homeSignals.status())
                     + (engine.isBypassing() ? "; Amazon visit preserved" : "");
             if (!destroyed) worker.postDelayed(this, allowed && queryHealthy ? 250 : 1000);
         }
@@ -383,6 +400,7 @@ public final class UsageMonitorService extends Service {
 
     @Override public void onDestroy() {
         synchronized (dispatchLock) { destroyed = true; }
+        if (homeSignals != null) homeSignals.stop();
         if (homeCover != null) homeCover.destroy();
         running = false;
         if (!status.startsWith("Monitor initialization failed")) status = "Monitor stopped";

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-/* AFTA fork changes implemented with OpenAI Codex on 2026-11-12; original Home on Fire by toolicious. */ package io.github.toolicious.homeonfire;
+/* AFTA fork changes implemented with OpenAI Codex on 2026-11-12; updated on 2026-11-14; original Home on Fire by toolicious. */ package io.github.toolicious.homeonfire;
 
 import java.util.ArrayDeque;
 
@@ -17,6 +17,8 @@ final class RedirectEngine {
     static final long HOME_DELAY_MS = 5500;
     static final long CONFIRM_TIMEOUT_MS = 10000;
     static final long CIRCUIT_WINDOW_MS = 30000;
+
+    private enum AmazonVisit { NONE, ESCAPE, SETTINGS }
 
     interface Log {
         void event(String event, String pkg, String cls, String detail);
@@ -55,7 +57,10 @@ final class RedirectEngine {
     private String lastAppPackage = "", lastAppClass = "";
     private boolean homeEnabled, bootEnabled, wakeEnabled, diagnosticOnly = true;
     private boolean escapeLongPressEnabled = true;
-    private boolean interactive, observationsAllowed, bypass, bootPending, tripped;
+    private boolean interactive, observationsAllowed, bootPending, bootReceived, tripped;
+    private AmazonVisit amazonVisit = AmazonVisit.NONE;
+    private long settingsEnteredAt = Long.MIN_VALUE;
+    private long lastHomePressedAt = Long.MIN_VALUE;
     private Request pending, submitted;
     private Request coveredHome;
     private boolean coverObserved;
@@ -89,7 +94,8 @@ final class RedirectEngine {
     void resume() {
         attempts.clear();
         tripped = false;
-        bypass = false;
+        amazonVisit = AmazonVisit.NONE;
+        clearHomeSignals();
         cancel("explicit resume");
         log.event("automation_resumed", "", "", "Historical events will not trigger a launch");
     }
@@ -114,22 +120,53 @@ final class RedirectEngine {
             return;
         }
         if (!changed) return; // SCREEN_ON / USER_PRESENT / dream-stop may overlap.
-        bypass = false; // An explicit new wake session follows the always-open preference.
+        amazonVisit = AmazonVisit.NONE; // A new wake follows the always-open preference.
         if (bootPending) {
             bootPending = false;
-            if (bootEnabled) scheduleTarget("boot", now + HOME_DELAY_MS);
+            if (bootEnabled) scheduleTarget("boot", now);
         } else if (wake && wakeEnabled) {
             scheduleTarget("wake", now + HOME_DELAY_MS);
         }
     }
 
     void boot(long now) {
+        if (bootReceived) return;
+        bootReceived = true;
         bootPending = bootEnabled && !interactive;
-        if (interactive && bootEnabled) scheduleTarget("boot", now + HOME_DELAY_MS);
+        // BOOT_COMPLETED is not a Home key. Read/seed the current state, then let
+        // the first eligible poll launch without adding the Home app-switch wait.
+        if (interactive && bootEnabled) scheduleTarget("boot", now);
+    }
+
+    /** A verified system Home launch supplies a cue, not a raw key. */
+    void homePressed(String reason, long receivedAt) {
+        if (!"homekey".equals(reason)) return;
+        log.event("home_signal", foregroundPackage, foregroundClass,
+                "reason=homekey; receivedAt=" + receivedAt);
+        if (!homeEnabled || diagnosticOnly || tripped || target.isEmpty()
+                || !interactive || !observationsAllowed) return;
+        lastHomePressedAt = Math.max(lastHomePressedAt, receivedAt);
+        if (amazonVisit == AmazonVisit.SETTINGS && receivedAt >= settingsEnteredAt) {
+            returnFromSettings(receivedAt);
+        }
+    }
+
+    private void returnFromSettings(long pressedAt) {
+        amazonVisit = AmazonVisit.NONE;
+        log.event("settings_visit_ended", foregroundPackage, foregroundClass,
+                "Home signal; receivedAt=" + pressedAt);
+        // The root may already be HomeActivity_vNext and emit no UsageEvent.
+        // A subpage instead needs its Home arrival before poll can submit.
+        scheduleTarget("settings_home", pressedAt + HOME_DELAY_MS);
+    }
+
+    private void clearHomeSignals() {
+        settingsEnteredAt = lastHomePressedAt = Long.MIN_VALUE;
     }
 
     void clearForeground() {
         foregroundPackage = foregroundClass = lastAppPackage = lastAppClass = "";
+        clearHomeSignals();
     }
 
     void resetObservation(String why) {
@@ -150,7 +187,13 @@ final class RedirectEngine {
         if (!foreground) {
             if (pkg.equals(foregroundPackage) && cls.equals(foregroundClass)) {
                 foregroundPackage = foregroundClass = "";
-                if (pending != null && isObservationRequest(pending)) cancel("activity left foreground");
+                if (pending != null && isObservationRequest(pending)
+                        && !"settings_home".equals(pending.reason)) {
+                    cancel("activity left foreground");
+                }
+                // A Home cue from Settings precedes its background/Home handover.
+                // Keep that one request until a successor or the guarded poll;
+                // an unrelated successor still cancels it below.
                 // Amazon going background after submission is the expected handover.
                 // A target leaving during the opaque hold is navigation away instead.
                 if (coverObserved) cancelCover("target left foreground");
@@ -179,22 +222,39 @@ final class RedirectEngine {
             submitted = null;
         }
         if (fresh && coveredHome != null && !isHome(pkg, cls)
-                && !coveredHome.packageName.equals(pkg)) {
+                && !coveredHome.packageName.equals(pkg)
+                && !isPreHomeSettings(coveredHome, pkg, cls, occurredAt)) {
             cancelCover("another activity appeared");
         }
         if (pending != null && isObservationRequest(pending)) {
-            boolean stillExpected = "home_inferred".equals(pending.reason)
+            boolean stillExpected = isHomeRequest(pending)
                     ? isHome(pkg, cls) : hud;
+            if (isPreHomeSettings(pending, pkg, cls, occurredAt)) {
+                stillExpected = true; // Settings published late, before the Home cue.
+            }
             if (!stillExpected) cancel("another activity appeared");
         }
         if (!fresh || same || !observationsAllowed || !interactive) return;
-        if (!isAmazonVisit(pkg)) bypass = false;
+        if (!isAmazonVisit(pkg)) {
+            amazonVisit = AmazonVisit.NONE;
+            if (occurredAt >= lastHomePressedAt) clearHomeSignals();
+        }
         // ACTION_SETTINGS briefly enters this handler, then displays the settings
         // root in HomeActivity_vNext. Preserve that visit before the Home event can
         // schedule a redirect or its loading cover. Ordinary settings and the HUD
         // are separate activities and must retain their existing behavior.
         if (SETTINGS_PACKAGE.equals(pkg) && SETTINGS_ENTRY_CLASS.equals(cls)) {
-            bypass = true;
+            if (amazonVisit != AmazonVisit.ESCAPE && lastHomePressedAt >= occurredAt) {
+                // The receiver can run before the poll publishes this handler.
+                // Do not re-latch Settings after the user's newer Home press.
+                if (pending != null && !isHomeRequest(pending)) cancel("Settings before Home signal");
+                returnFromSettings(lastHomePressedAt);
+                return;
+            }
+            if (amazonVisit != AmazonVisit.ESCAPE) {
+                amazonVisit = AmazonVisit.SETTINGS;
+                settingsEnteredAt = occurredAt;
+            }
             cancel("explicit Settings request");
             log.event("settings_visit_preserved", pkg, cls,
                     "ACTION_SETTINGS handler observed; Amazon settings visit preserved");
@@ -203,14 +263,16 @@ final class RedirectEngine {
         if (hud && homeEnabled && escapeLongPressEnabled) {
             log.event("hud_inferred", pkg, cls, "Previous activity: " + previous + "/" + previousClass);
             if (previous.equals(target) && !target.isEmpty()) {
-                bypass = true;
+                amazonVisit = AmazonVisit.ESCAPE;
+                clearHomeSignals();
                 cancel("HUD escape");
                 schedule(new Request(HOME_PACKAGE, "hud_escape", true, now));
             } else if (isHome(previous, previousClass)) {
-                bypass = false;
+                amazonVisit = AmazonVisit.NONE;
+                clearHomeSignals();
                 scheduleTarget("hud_return", now + HOME_DELAY_MS);
             }
-        } else if (isHome(pkg, cls) && homeEnabled && !bypass) {
+        } else if (isHome(pkg, cls) && homeEnabled && !isBypassing()) {
             log.event("home_inferred", pkg, cls, "Launcher arrival; physical key is not observable");
             scheduleTarget("home_inferred", now + HOME_DELAY_MS);
         }
@@ -242,8 +304,8 @@ final class RedirectEngine {
             cancelCover("Usage Access unavailable");
             return null;
         }
-        if ("home_inferred".equals(next.reason)
-                && (!isHome(foregroundPackage, foregroundClass) || bypass)) {
+        if (isHomeRequest(next)
+                && (!isHome(foregroundPackage, foregroundClass) || isBypassing())) {
             cancelCover("Amazon visit no longer eligible");
             return null;
         }
@@ -281,7 +343,8 @@ final class RedirectEngine {
 
     void manualAmazon() {
         cancel("manual Amazon launch");
-        bypass = true;
+        amazonVisit = AmazonVisit.ESCAPE;
+        clearHomeSignals();
     }
 
     void cancel(String why) {
@@ -308,6 +371,7 @@ final class RedirectEngine {
             return;
         }
         if (submitted != null) return;
+        if (pending != null && isHomeRequest(pending) && isHomeRequest(request)) return;
         // Wake/boot requests already cover a subsequent Amazon launcher arrival.
         if (pending != null && !isObservationRequest(pending)
                 && "home_inferred".equals(request.reason)) return;
@@ -315,7 +379,7 @@ final class RedirectEngine {
         pending = new Request(request.packageName, request.reason, request.amazon, request.due,
                 ++requestSequence);
         log.event("launch_scheduled", request.packageName, "", request.reason + "; due=" + request.due);
-        if (cover != null && "home_inferred".equals(pending.reason)) {
+        if (cover != null && isHomeRequest(pending)) {
             coveredHome = pending;
             coverObserved = false;
             cover.show(pending.id, pending.packageName);
@@ -330,7 +394,17 @@ final class RedirectEngine {
     }
 
     private static boolean isObservationRequest(Request r) {
-        return r.reason.startsWith("hud_") || "home_inferred".equals(r.reason);
+        return r.reason.startsWith("hud_") || isHomeRequest(r);
+    }
+
+    private boolean isPreHomeSettings(Request request, String pkg, String cls, long occurredAt) {
+        return "settings_home".equals(request.reason) && SETTINGS_PACKAGE.equals(pkg)
+                && !isHud(pkg, cls) && lastHomePressedAt != Long.MIN_VALUE
+                && occurredAt <= lastHomePressedAt;
+    }
+
+    private static boolean isHomeRequest(Request r) {
+        return "home_inferred".equals(r.reason) || "settings_home".equals(r.reason);
     }
 
     static boolean isHome(String pkg, String cls) {
@@ -343,7 +417,7 @@ final class RedirectEngine {
         return HOME_PACKAGE.equals(pkg) || SETTINGS_PACKAGE.equals(pkg);
     }
     boolean isTripped() { return tripped; }
-    boolean isBypassing() { return bypass; }
+    boolean isBypassing() { return amazonVisit != AmazonVisit.NONE; }
     String foreground() { return foregroundPackage + "/" + foregroundClass; }
     String lastResult() { return lastResult; }
     String pendingReason() { return pending == null ? "none" : pending.reason; }

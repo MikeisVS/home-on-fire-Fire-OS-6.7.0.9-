@@ -1,5 +1,5 @@
 #requires -Version 5.1
-# AFTA fork changes implemented with OpenAI Codex on 2026-11-12; original Home on Fire by toolicious.
+# AFTA fork changes implemented with OpenAI Codex on 2026-11-12; updated on 2026-11-14; original Home on Fire by toolicious.
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot '..\scripts\Adb.Common.ps1')
@@ -8,6 +8,14 @@ function Assert-Equal([string] $Actual, [string] $Expected, [string] $Message) {
     if ($Actual -cne $Expected) { throw "$Message : [$Actual] != [$Expected]" }
     $script:Assertions++
 }
+$signerA = 'a' * 64
+$signerB = 'b' * 64
+Assert-Equal (Get-AftaSignerIdentity "Signer #1 certificate SHA-256 digest: $signerA") $signerA 'Signer identity comes from verified certificate output'
+Assert-Equal (Get-AftaSignerIdentity "Signer #2 certificate SHA-256 digest: $signerB`nSigner #1 certificate SHA-256 digest: $signerA") ($signerA + ',' + $signerB) 'Multiple signer identities compare independently of output order'
+Assert-Equal ([string]((Get-AftaSignerIdentity "Signer #1 certificate SHA-256 digest: $signerA") -ceq (Get-AftaSignerIdentity "Signer #1 certificate SHA-256 digest: $signerB"))) 'False' 'Different signing keys cannot pass identity comparison'
+$missingSignerRejected = $false
+try { $null = Get-AftaSignerIdentity 'Verified using v2 scheme: true' } catch { $missingSignerRejected = $true }
+Assert-Equal ([string]$missingSignerRejected) 'True' 'Missing signer output is rejected instead of matching empty identities'
 $upstream = 'io.github.toolicious.homeonfire/.HijackService'
 $other = 'com.example.screenreader/.Reader'
 $mine = 'io.github.toolicious.homeonfire.afta/io.github.toolicious.homeonfire.HijackService'
