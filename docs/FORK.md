@@ -19,13 +19,15 @@ The owner created this fork to get the app working on their **Fire TV Cube Gen 1
 
 Modified inherited files include `AndroidManifest.xml`, `build.ps1`, `.gitignore`, `res/values/colors.xml`, `res/values/strings.xml`, and `AccessibilityHelper.java`, `BootReceiver.java`, `Colors.java`, `HijackService.java`, `LogViewerActivity.java`, `MainActivity.java` and `Prefs.java` under `src/io/github/toolicious/homeonfire/`. New AFTA classes, resource IDs, scripts, tests and public documentation are included. Modified source files carry dated notices.
 
-## Update made November 14, 2026
+## Updates made November 14, 2026
 
 Afta.11 removes only the additional boot scheduling wait, coalesces duplicate boot delivery and bounds initial usage history to the current boot. It adds the optional, strictly filtered READ_LOGS Home cue for single-Home return from preserved Settings and guards delayed Settings events against newer requests/covers. Home/HUD/wake delays and the suspension circuit remain.
 
 The Windows installer now checks installed/candidate signing identities before stopping the app and attempts to reopen the existing app on installation failure. The host suite expands to 347 assertions. Original modification notices are retained and changed/new files carry the update date.
 
-Core changes are in `RedirectEngine.java`, `UsageCursor.java`, `UsageMonitorService.java`, new `HomeIntentLog.java` and `HomeIntentMonitor.java`, the manifest, installation helpers, tests and public documentation.
+Afta.12 adds recovery from the same Amazon activity after an unconfirmed Home return, requiring a fresh Home cue and retaining all delay, cancellation and circuit guards. Its 15 additional recovery assertions bring the host suite to 362. This update changes `RedirectEngine.java`, `StartupHomeTest.java`, the manifest version and public documentation.
+
+The earlier afta.11 core changes are in `RedirectEngine.java`, `UsageCursor.java`, `UsageMonitorService.java`, new `HomeIntentLog.java` and `HomeIntentMonitor.java`, the manifest, installation helpers, tests and public documentation.
 
 | Version | Change |
 | --- | --- |
@@ -40,5 +42,6 @@ Core changes are in `RedirectEngine.java`, `UsageCursor.java`, `UsageMonitorServ
 | afta.9 | Preserve Couchy's Android Settings visit. |
 | afta.10 | Intermediate boot/Settings work; its Home broadcast was denied on this firmware. |
 | afta.11 | Immediate eligible boot request, filtered Settings Home cue and signing preflight. |
+| afta.12 | Fresh-cue recovery after an unconfirmed Home return; existing guards retained. |
 
 Publication does not change the recorded [qualification status](COMPATIBILITY.md). The APK remains an experimental development/debug build. License: **GPL-3.0-or-later**, with the original [LICENSE](../LICENSE) unchanged. Corresponding source is available from this fork and its release source archive.

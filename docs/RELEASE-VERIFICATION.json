@@ -1,16 +1,16 @@
 {
-  "version": "1.5.2-afta.11",
-  "versionCode": 14011,
+  "version": "1.5.2-afta.12",
+  "versionCode": 14012,
   "packageName": "io.github.toolicious.homeonfire.afta",
   "apkFile": "home-on-fire-afta.apk",
-  "apkSha256": "4c1e408c1510333138aa691197d2c4d4bfca22deff580171b0e9cb0d16ee09b4",
+  "apkSha256": "f5bf13b50c22b29eee1664477d69520d588eb2db841b8b412308145561810aa8",
   "publicationRebuildMatchesRecordedInstalledApk": true,
   "signingCertificateSha256": "969f6a534bef42af0bff61be8662a83c072e7e6ee6df097c20da80c5671d0fee",
-  "hostAssertions": 347,
+  "hostAssertions": 362,
   "checks": [
     "80 redirection",
     "23 usage cursor",
-    "50 startup/Home",
+    "65 startup/Home",
     "29 Home-log recognition",
     "79 Home cover",
     "59 cleanup",
@@ -21,8 +21,8 @@
     "61 publication build inputs"
   ],
   "sourceBaseCommit": "f629042674f1faa4b7bce0f54b77a5f849202651",
-  "publicationBaseCommit": "2dda387917a09c76e1725a7d1651b07faff334fe",
-  "sourceTag": "v1.5.2-afta.11",
+  "publicationBaseCommit": "0271e13ffe425233d26d8a9e173383ea35926499",
+  "sourceTag": "v1.5.2-afta.12",
   "jdk": "javac 25.0.1",
   "compileSdk": 35,
   "minSdk": 21,
@@ -36,12 +36,12 @@
   "additionalPermission": {
     "name": "android.permission.READ_LOGS",
     "optional": true,
-    "purpose": "Filtered system Home cue for single-Home return from preserved Settings"
+    "purpose": "Filtered system Home cue for Settings return and recovery after an unconfirmed Home return"
   },
   "recordedDeviceEvidenceDate": "2026-11-14",
-  "verifiedAtUtc": "2026-11-14T16:18:25.635Z",
+  "verifiedAtUtc": "2026-11-15T02:16:04.751717+00:00",
   "sourceBuildInputHashes": {
-    "AndroidManifest.xml": "0cc3cba26d4945481e3149d13fa595a05956794a859c998c5b27f237a81ee68f",
+    "AndroidManifest.xml": "a17bf5826dd1aff2b0dd706b041a41c656ac4f3b4cf673991847a302a04d51cd",
     "build.ps1": "afe1277d6866278981f4d6974527b03743d9cce627073d654c536124195123ec",
     "res/color/info_button_text.xml": "abcd4f2a0d3ac46b1ac206d368162258b0440f9f18d8dbcca2230e784d0f785d",
     "res/drawable/ic_key_apps.xml": "75cc647a7b545240c7c6805d51c186231766dc874494013ff1d0fd7439055292",
@@ -95,12 +95,14 @@
     "src/io/github/toolicious/homeonfire/LogViewerActivity.java": "339af8a490ae786e0bb270dd5299a73726f3e2ce4eb3be16274fb5f519daeac6",
     "src/io/github/toolicious/homeonfire/MainActivity.java": "128ae564c23889397a9782a4b0bde78d5edfcb2da1bf5d920e1d6a154abda0d1",
     "src/io/github/toolicious/homeonfire/Prefs.java": "ca2a8b64c2a3165ffb063a1f8fb6f3923622ea7e404731d11c2a92b56d65ee9e",
-    "src/io/github/toolicious/homeonfire/RedirectEngine.java": "dabfc82a9c4fb0251da4f734d6662fc5471119e096323087af6d50491def7afa",
+    "src/io/github/toolicious/homeonfire/RedirectEngine.java": "920b572a4e5b6be928fa79616848a4c24f5490c7127c12c8971759a065b844c6",
     "src/io/github/toolicious/homeonfire/SettingsLauncher.java": "5a4e4b3b1f15a9f17ab822f069bc7af5344da43e09c768760d2eac04bf718bd2",
     "src/io/github/toolicious/homeonfire/TargetLauncher.java": "2edf4fda685d47f82fd516dd2fa6ad8cd7112094cd762afd9702d1b11ed467d1",
     "src/io/github/toolicious/homeonfire/TargetPickerActivity.java": "a81f72a37732e2b1bf486fcceaf7c06856cf5854b2af967cd54098313bee7b70",
     "src/io/github/toolicious/homeonfire/UiUtil.java": "43c42806e86e9cf7ea347bf6004045c01d98bf5a5f71d1b3443df389ab076dd2",
     "src/io/github/toolicious/homeonfire/UsageCursor.java": "e3bd68ed1e4387834df856698ea498e4862e753ceaebc362650d1e8c99670dfc",
     "src/io/github/toolicious/homeonfire/UsageMonitorService.java": "27930bcd187e5239ecb5bb6a1b2184b96a64743623727920388f108982f20424"
-  }
+  },
+  "rareHomeRecoveryHardwareReproduction": false,
+  "recordedInstalledApkReadbackUtc": "2026-11-15T00:17:36.295361Z"
 }

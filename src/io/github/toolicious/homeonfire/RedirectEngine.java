@@ -61,6 +61,7 @@ final class RedirectEngine {
     private AmazonVisit amazonVisit = AmazonVisit.NONE;
     private long settingsEnteredAt = Long.MIN_VALUE;
     private long lastHomePressedAt = Long.MIN_VALUE;
+    private long retryHomeAfter = Long.MIN_VALUE;
     private Request pending, submitted;
     private Request coveredHome;
     private boolean coverObserved;
@@ -145,9 +146,18 @@ final class RedirectEngine {
                 "reason=homekey; receivedAt=" + receivedAt);
         if (!homeEnabled || diagnosticOnly || tripped || target.isEmpty()
                 || !interactive || !observationsAllowed) return;
+        expireSubmitted(receivedAt);
         lastHomePressedAt = Math.max(lastHomePressedAt, receivedAt);
         if (amazonVisit == AmazonVisit.SETTINGS && receivedAt >= settingsEnteredAt) {
             returnFromSettings(receivedAt);
+        } else if (retryHomeAfter != Long.MIN_VALUE && receivedAt >= retryHomeAfter
+                && pending == null && submitted == null
+                && isHome(foregroundPackage, foregroundClass) && !isBypassing()) {
+            // A new physical Home can reuse Amazon's existing activity and emit no
+            // foreground event. Recover only after the previous Home timed out;
+            // never retry an Android start merely because confirmation is absent.
+            retryHomeAfter = Long.MIN_VALUE;
+            scheduleTarget("home_recovery", receivedAt + HOME_DELAY_MS);
         }
     }
 
@@ -166,6 +176,7 @@ final class RedirectEngine {
 
     void clearForeground() {
         foregroundPackage = foregroundClass = lastAppPackage = lastAppClass = "";
+        retryHomeAfter = Long.MIN_VALUE;
         clearHomeSignals();
     }
 
@@ -205,6 +216,7 @@ final class RedirectEngine {
         String previousClass = lastAppClass;
         foregroundPackage = pkg;
         foregroundClass = cls;
+        if (!isHome(pkg, cls)) retryHomeAfter = Long.MIN_VALUE;
         boolean hud = isHud(pkg, cls);
         if (!hud) {
             lastAppPackage = pkg;
@@ -278,9 +290,11 @@ final class RedirectEngine {
         }
     }
 
-    /** Retrieve at most one eligible request; callers must report submission or failure. */
-    Request poll(long now) {
+    private void expireSubmitted(long now) {
         if (submitted != null && now - submittedAt >= CONFIRM_TIMEOUT_MS) {
+            retryHomeAfter = isHomeRequest(submitted)
+                    && isHome(foregroundPackage, foregroundClass) && !isBypassing()
+                    ? submittedAt + CONFIRM_TIMEOUT_MS : Long.MIN_VALUE;
             lastResult = "Launch unconfirmed: " + submitted.packageName;
             log.event("launch_unconfirmed", submitted.packageName, "", submitted.reason);
             if (coveredHome != null && coveredHome.id == submitted.id) cancelCover("launch unconfirmed");
@@ -293,6 +307,11 @@ final class RedirectEngine {
                 log.event("confirmation_unavailable", "", "", lastResult);
             }
         }
+    }
+
+    /** Retrieve at most one eligible request; callers must report submission or failure. */
+    Request poll(long now) {
+        expireSubmitted(now);
         if (pending == null || pending.due > now || submitted != null) return null;
         Request next = pending;
         pending = null;
@@ -348,6 +367,7 @@ final class RedirectEngine {
     }
 
     void cancel(String why) {
+        retryHomeAfter = Long.MIN_VALUE;
         if (pending != null) log.event("launch_cancelled", pending.packageName, "", why);
         pending = null;
         cancelCover(why);
@@ -404,7 +424,8 @@ final class RedirectEngine {
     }
 
     private static boolean isHomeRequest(Request r) {
-        return "home_inferred".equals(r.reason) || "settings_home".equals(r.reason);
+        return "home_inferred".equals(r.reason) || "settings_home".equals(r.reason)
+                || "home_recovery".equals(r.reason);
     }
 
     static boolean isHome(String pkg, String cls) {

@@ -219,10 +219,66 @@ public final class StartupHomeTest {
         check(t.engine.poll(10000) == null, "A cue without a preserved Settings visit does not add a general Home launch path");
     }
 
+    private static void homeRecoveryTests() {
+        Trace t = new Trace(); t.home(100); t.engine.poll(5600);
+        check(t.engine.poll(15600) == null && t.engine.poll(20000) == null,
+                "An unconfirmed Home never retries automatically");
+        t.engine.homePressed("homekey", 21000);
+        t.engine.homePressed("homekey", 21100); t.home(21200);
+        check(t.engine.poll(26499) == null, "A new recovery Home keeps the app-switch cooldown");
+        RedirectEngine.Request request = t.engine.poll(26500);
+        check(request != null && TARGET.equals(request.packageName) && !request.amazon,
+                "A fresh Home after an unconfirmed return recovers from the same Amazon activity");
+        check(t.shown == 2 && t.engine.poll(26501) == null && !t.engine.isTripped(),
+                "Recovery duplicates share one cover, deadline and submission");
+        t.target(26600);
+        check(t.ready == 1 && t.engine.lastResult().startsWith("Observed"),
+                "A recovered target is confirmed by a fresh foreground event");
+
+        t = new Trace(); t.home(100); t.engine.poll(5600);
+        t.engine.homePressed("homekey", 6000);
+        check(t.engine.poll(12000) == null && t.shown == 1,
+                "Home during an outstanding Android start cannot submit another start");
+        t.engine.homePressed("homekey", 16000);
+        check(t.engine.poll(21500) != null,
+                "A fresh overdue Home can recover before the next timeout poll");
+
+        t = new Trace(); t.home(100); t.engine.poll(5600); t.engine.poll(15620);
+        t.engine.homePressed("homekey", 6000);
+        check(t.engine.poll(20000) == null && t.shown == 1,
+                "A delayed cue from before the confirmation deadline cannot recover an old request");
+        t.engine.homePressed("homekey", 15610);
+        check(t.engine.poll(21110) != null,
+                "A new cue after the deadline remains valid when delivered after the timeout poll");
+
+        t = new Trace(); t.home(100); t.engine.poll(5600); t.engine.poll(15600);
+        t.engine.homePressed("homekey", 21000); t.foreground("video.app", "Player", 22000);
+        check(t.engine.poll(26500) == null && t.cancelled == 2,
+                "Navigation away cancels the recovery and its cover");
+
+        t = new Trace(); t.home(100); t.engine.poll(5600); t.engine.poll(15600);
+        t.engine.manualAmazon(); t.engine.homePressed("homekey", 21000);
+        check(t.engine.isBypassing() && t.engine.poll(26500) == null && t.shown == 1,
+                "An intentional Amazon escape clears recovery eligibility");
+
+        for (int reset = 0; reset < 4; reset++) {
+            t = new Trace(); t.home(100); t.engine.poll(5600); t.engine.poll(15600);
+            if (reset == 0) { t.engine.permission(false); t.engine.permission(true); }
+            if (reset == 1) { t.engine.screen(false, false, 17000); t.engine.screen(true, false, 18000); }
+            if (reset == 2) t.engine.configure(TARGET, true, true, false, false, false);
+            if (reset == 3) t.engine.resetObservation("new cursor or clock");
+            t.engine.observe(RedirectEngine.HOME_PACKAGE, RedirectEngine.HOME_CLASS, true, false, 19000);
+            t.engine.homePressed("homekey", 21000);
+            check(t.engine.poll(26500) == null,
+                    "Recovery is not replayed after permission/screen/configuration/cursor reset " + reset);
+        }
+    }
+
     public static void main(String[] args) {
         bootTests();
         settingsTests();
         orderingAndGuardTests();
+        homeRecoveryTests();
         System.out.println("Startup/Home signal: " + checks + " behavioral assertions passed");
     }
 }

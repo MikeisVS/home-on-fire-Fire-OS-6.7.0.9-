@@ -4,7 +4,7 @@ Added for **1.5.2-afta.11**, tested on **AFTA / Fire OS 6.7.0.9 / API 25** on No
 
 Amazon's generic Android Settings route hands over to its own Home activity before displaying Settings. Afta.9 preserved that visit, but a short Home press inside the same activity could produce no new UsageEvent. Long-Home remained the return path.
 
-The attempted CLOSE_SYSTEM_DIALOGS/homekey receiver was denied by an Amazon signature permission on the tested firmware. It is not used by afta.11. The replacement reads the separately observed system ActivityManager Home-launch records with the additional `android.permission.READ_LOGS` grant.
+The attempted CLOSE_SYSTEM_DIALOGS/homekey receiver was denied by an Amazon signature permission on the tested firmware. It is not used by afta.11 or afta.12. The replacement reads the separately observed system ActivityManager Home-launch records with the additional `android.permission.READ_LOGS` grant.
 
 ## Permission and data boundary
 
@@ -23,6 +23,8 @@ A Home cue can end Settings preservation without interrupting Back/navigation or
 
 ## Evidence and limits
 
-The 347-assertion host suite includes 29 strict parser and 50 startup/Home checks. Recorded awake ADB Settings/Back/Home checks passed, three ADB restarts retained the grant, and the owner reported the prompted physical Settings/Back/Home return worked. One passively observed return lacked a fresh target UsageEvent and timed out unconfirmed despite the positive visual report.
+The current afta.12 host suite has 362 assertions, including 29 strict parser and 65 startup/Home checks. Afta.12 adds fresh-cue recovery after an unconfirmed Home return. The earlier afta.11 recorded awake ADB Settings/Back/Home checks passed, three ADB restarts retained the grant, and the owner reported the prompted physical Settings/Back/Home return worked. One passively observed return lacked a fresh target UsageEvent and timed out unconfirmed despite the positive visual report.
+
+The rare afta.12 recovery branch has host coverage but no newly isolated on-device reproduction.
 
 The broader physical Home/HUD sequence, power-disconnection cold boots, long-term survival, log rotation and other firmware remain unqualified. Host checks do not establish future firmware behavior. See [compatibility](COMPATIBILITY.md).

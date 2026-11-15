@@ -1,17 +1,17 @@
 # Install and recover on the tested Cube
 
-Target: **Fire TV Cube Gen 1 (AFTA), Fire OS 6.7.0.9 / API 25**. Read [compatibility](COMPATIBILITY.md). The **1.5.2-afta.11** preview is a development/debug APK with its own signing identity.
+Target: **Fire TV Cube Gen 1 (AFTA), Fire OS 6.7.0.9 / API 25**. Read [compatibility](COMPATIBILITY.md). The **1.5.2-afta.12** preview is a development/debug APK with its own signing identity.
 
 ## Download and inspect
 
-Get `home-on-fire-afta.apk` and `home-on-fire-afta.apk.sha256` from [the release](https://github.com/MikeisVS/home-on-fire-Fire-OS-6.7.0.9-/releases/tag/v1.5.2-afta.11). Corresponding source and its checksum are included there.
+Get `home-on-fire-afta.apk` and `home-on-fire-afta.apk.sha256` from [the release](https://github.com/MikeisVS/home-on-fire-Fire-OS-6.7.0.9-/releases/tag/v1.5.2-afta.12). Corresponding source and its checksum are included there.
 
 ```powershell
 Get-FileHash -LiteralPath ./home-on-fire-afta.apk -Algorithm SHA256
 Get-Content -LiteralPath ./home-on-fire-afta.apk.sha256
 ```
 
-Check that the hashes match. Keep the previous APK and your original signing key before updating. The published afta.11 APK retains the same signing identity as the published afta.9 APK and can update it using `install -r`.
+Check that the hashes match. Keep the previous APK and your original signing key before updating. The published afta.12 APK retains the same signing identity as the earlier afta.9 and afta.11 APKs and can update them using `install -r`.
 
 ## ADB setup
 
@@ -70,6 +70,8 @@ Omit `-EnableHomeIntentLog` to keep the additional permission ungranted. The hel
 ## Recovery and uninstall
 
 Let the 5.5-second Home/HUD/wake wait finish. Boot requests no longer add that wait. Three automatic requests within 30 seconds suspend automation. Inspect the cause, then use **Advanced settings → Resume after automatic suspension**. **Stop monitor and all automatic redirection** cancels local pending work; submitted Android starts cannot be withdrawn.
+
+If a Home return times out without confirmation, a later fresh system Home cue can recover while Amazon remains foreground. Afta.12 keeps the existing delay and circuit; an unconfirmed timeout alone never retries.
 
 Long-Home escapes/returns through Amazon on the tested firmware. With the optional listener enabled, single Home ends a preserved Android Settings visit while Back keeps it open. See the [recorded limits](COMPATIBILITY.md).
 

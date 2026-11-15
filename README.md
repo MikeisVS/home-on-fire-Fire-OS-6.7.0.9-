@@ -10,18 +10,22 @@ I created this fork to get the app working with my **first-generation Amazon Fir
 
 ## Download
 
-**[Download the APK](https://github.com/MikeisVS/home-on-fire-Fire-OS-6.7.0.9-/releases/download/v1.5.2-afta.11/home-on-fire-afta.apk)** · **[Release notes, checksums, and source](https://github.com/MikeisVS/home-on-fire-Fire-OS-6.7.0.9-/releases/tag/v1.5.2-afta.11)**
+**[Download the APK](https://github.com/MikeisVS/home-on-fire-Fire-OS-6.7.0.9-/releases/download/v1.5.2-afta.12/home-on-fire-afta.apk)** · **[Release notes, checksums, and source](https://github.com/MikeisVS/home-on-fire-Fire-OS-6.7.0.9-/releases/tag/v1.5.2-afta.12)**
 
-Version **1.5.2-afta.11**, code **14011**, package **`io.github.toolicious.homeonfire.afta`**. It installs alongside the original app. Enable only one Home redirection app at a time.
+Version **1.5.2-afta.12**, code **14012**, package **`io.github.toolicious.homeonfire.afta`**. It installs alongside the original app. Enable only one Home redirection app at a time.
 
 This is an **experimental preview**, using the same development/debug APK as the recorded Cube tests. Full reliability qualification and testing on other firmware/devices remain outstanding. Read [compatibility and testing](docs/COMPATIBILITY.md).
 
-## Updated in afta.11
+## Updated in afta.12
+
+- **Recovery after a missed Home return.** If an earlier Home launch timed out without a fresh launcher confirmation and Amazon reused the same activity, a new verified Home cue from the optional `READ_LOGS` listener can schedule another return. Recovery keeps the 5.5-second delay, cancellation rules and suspension circuit. A timeout alone does not retry.
+- **362 host assertions**, including 15 recovery checks covering duplicate cues, delayed delivery, navigation cancellation and reset conditions.
+
+The earlier afta.11 improvements remain:
 
 - **No extra 5.5-second boot wait.** The first eligible monitor poll can start the target after boot notification. Duplicate boot delivery is coalesced, and prior-boot activity history cannot satisfy the new startup request. Fire OS's own boot delay remains.
 - **Single Home from preserved Android Settings.** An optional, filtered system Home listener distinguishes a Home press from the Settings handover. It requires the additional `READ_LOGS` grant described below. Back keeps the Settings visit open; deliberate long-Home escape to Amazon remains available.
 - **Safer APK updates.** The Windows installer compares the candidate and installed signing identities before stopping the app. A mismatched key is rejected; an installation failure attempts to reopen the existing app.
-- **347 host assertions**, covering boot ordering, delayed Settings events, strict Home-log recognition, and signing preflight.
 
 ## Cube features
 
@@ -80,11 +84,11 @@ Output: `artifacts/home-on-fire-afta.apk`, a SHA-256 checksum, APK/signature ins
 
 The default creates a persistent development key under `%LOCALAPPDATA%/HomeOnFireAfta/signing/`, outside Git. Keep the original key for updates. A self-build signed with another key cannot update the published APK in place; the installer checks this before stopping the installed app.
 
-The host suite has **347 assertions**: 80 redirection, 23 usage cursor, 50 startup/Home, 29 Home-log recognition, 79 loading cover, 59 cleanup, and 27 script helpers. Passing these does not establish hardware compatibility.
+The host suite has **362 assertions**: 80 redirection, 23 usage cursor, 65 startup/Home, 29 Home-log recognition, 79 loading cover, 59 cleanup, and 27 script helpers. Passing these does not establish hardware compatibility.
 
 ## Limits, privacy, and license
 
-Earlier missed Home/wake events and process-loss failures remain limitations. Wake automation can bring the launcher over a previously open app. **Early post-reboot app loading remains unresolved**; removing the app's boot wait does not establish a general Fire TV performance fix. See [validation boundaries](docs/COMPATIBILITY.md).
+Earlier missed Home/wake events and process-loss failures remain limitations. Wake automation can bring the launcher over a previously open app. **Early post-reboot app loading remains unresolved**; removing the app's boot wait does not establish a general Fire TV performance fix. See [validation boundaries](docs/COMPATIBILITY.md) and [app/VPN troubleshooting](docs/TROUBLESHOOTING.md).
 
 The app has **no Internet permission**. Settings and optional diagnostic metadata stay local. `READ_LOGS` is optional and broader than the filtered Home listener's use. Public source excludes signing keys, private device logs, screenshots from tests, and personal device addresses. The preview is debuggable to support the existing local diagnostic tools.
 

@@ -2,9 +2,21 @@
 
 Target: the owner's **Fire TV Cube Gen 1**, **AFTA**, Fire OS **6.7.0.9 / NS6709/5669**, Android **7.1.2 / API 25**, with **Couchy 1.0.6**. This is an **experimental preview**. Another firmware or device is unverified.
 
-## Current recorded evidence — November 14, 2026
+## Latest source and APK — November 14, 2026
 
-Latest tested version: **1.5.2-afta.11**, code **14011**. Installed bytes matched the reviewed APK, with the same signing identity as afta.9. The firmware rejects the original accessibility provider; this Cube uses the separate Usage Access backend.
+The current update is **1.5.2-afta.12**, code **14012**, with the same signing identity as the earlier preview. Its reviewed APK was installed on the recorded Cube before publication; a later pulled APK matched the reviewed hash.
+
+- **362 passing host assertions**: 80 redirection, 23 cursor, 65 startup/Home, 29 Home-log recognition, 79 cover, 59 cleanup, and 27 script helpers.
+- A new verified system Home cue from the optional `READ_LOGS` listener can recover after a previous unconfirmed Home return while Amazon reuses the same activity. A timeout alone never retries; existing delays, cancellation/reset gates and the three-request circuit remain.
+- The 15 additional recovery assertions cover duplicates, overdue and delayed cues, navigation away, deliberate Amazon escape and permission/screen/configuration/cursor resets.
+- The rare recovery branch has no newly isolated on-device reproduction. Earlier accepted ADB and physical checks below remain evidence for their recorded version.
+- Event delivery and overlay attachment occur after the system Home transition, so Amazon can appear before the loading cover is visible.
+- The owner's latest ordinary-use report says all apps work normally. Separate device app-setting rollbacks are not bundled into this launcher update and do not establish a general performance fix. See [troubleshooting](TROUBLESHOOTING.md).
+- Public source, matching APK, checksums and source archive are verified together. No device is contacted or changed during publication.
+
+## Earlier afta.11 recorded evidence — November 14, 2026
+
+The preceding tested version was **1.5.2-afta.11**, code **14011**. Installed bytes matched the reviewed APK, with the same signing identity as afta.9. The firmware rejects the original accessibility provider; this Cube uses the separate Usage Access backend.
 
 - **347 passing host assertions**: 80 redirection, 23 cursor, 50 startup/Home, 29 Home-log recognition, 79 cover, 59 cleanup, and 27 script helpers.
 - Bounded awake ADB checks observed normal Home, preserved Couchy Android Settings entry, Back within the Settings grid, single Home from preserved root/subpage Settings, and deliberate long-Home Amazon escape/return.
